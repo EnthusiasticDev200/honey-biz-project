@@ -67,8 +67,6 @@ const loginAdmin = async (req, res) => {
       {
         adminId : admin.admin_id,
         adminUsername : admin.username,
-        isAdmin : admin.is_admin,
-        isCustomer : false,
         role : admin.role
       }
     console.log('admin:payload ', adminPayload)
@@ -145,8 +143,6 @@ const refreshAdminToken = async (req, res) =>{
     adminPayload = {
       adminId : admin.admin_id,
       adminUsername : admin.username,
-      isAdmin : admin.is_admin,
-      isCustomer : false,
       role : admin.role
     }
     // Update redis with new data
