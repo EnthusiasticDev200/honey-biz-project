@@ -59,6 +59,7 @@ const createOrder = async (req, res) =>{
        const generateOrder = await db.query(`
             INSERT INTO orders (customer_id, payment_method, payment_status)
             VALUES ($1, $2, $3)
+            RETURNING order_id;
         `, [customerId, paymentMethod, paymentStatus])
 
         const generatedOrderData = {
