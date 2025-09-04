@@ -100,15 +100,8 @@ const orderSchema = z.object({
     const result = paymentMethodValue(val)
     if(result instanceof Error) throw result // throws input error
     return result.toLowerCase()
- 
+
   }),
-  paymentStatus : z.string()
-  .nonempty()
-  .transform((val)=>{
-    const result = paymentStatusValue(val)
-  if(result instanceof Error) throw result
-  return result.toLowerCase()
-  })
 })
 
 const validate = schema => (req, res, next)=>{
