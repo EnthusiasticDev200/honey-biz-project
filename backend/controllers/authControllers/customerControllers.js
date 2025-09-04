@@ -19,11 +19,11 @@ const registerCustomer = async (req, res) => {
   try {
     const { firstName, lastName, username, email, phoneNumber, password } =
       req.body;
-    const existingAdmin = await db.query(
+    const existingCustomer = await db.query(
       `SELECT email FROM customers WHERE email = $1`,
       [email]
     );
-    if (existingAdmin.rows.length > 0)
+    if (existingCustomer.rows.length > 0)
       return res.status(403).json({
         message: "Customer already exist",
       });
@@ -74,8 +74,7 @@ const loginCustomer = async (req, res) => {
       {
         customerId : customer.customer_id,
         customerUsername : customer.username,
-        isCustomer : customer.is_customer,
-        isAdmin : false
+        
       }
     console.log("Customer payload: ", customerPayload)
     
@@ -156,9 +155,7 @@ const refreshCustomerToken = async (req, res)=>{
     //generate new payload
     customerPayload = {
       customerId : customer.customer_id,
-      customerUsername : customer.username,
-      isCustomer : customer.is_customer,
-      isAdmin : false
+      customerUsername : customer.username
     }
     //update redis
     await redis.set(
