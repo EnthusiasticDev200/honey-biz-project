@@ -18,21 +18,20 @@ const createOrder = async (req, res) =>{
         const customerId = ifCustomer[0]
 
         const verifyCustomer = await db.query(`
-            SELECT email FROM custoers WHERE customer_id = $1`,
+            SELECT email FROM customers WHERE customer_id = $1`,
         [customerId])
         if(verifyCustomer.rows.length === 0){
             return res.status(403).json({message: 'Gotcha! Not a customer'})
         }
         console.log('customerId from Order: ', customerId)
-        const {paymentMethod, paymentStatus} = req.body
+        const {paymentMethod} = req.body
 
-        const existingStatus = 'pending'
         // Clear pending orders first
         const pendingingOrder = await db.query(`
             SELECT * FROM orders 
             WHERE customer_id = $1
-            AND payment_status = $2
-         `, [customerId, existingStatus])
+            AND payment_status = "pending"
+         `, [customerId])
          if(pendingingOrder.rows.length === 1){
              return res.status(400).json({
                 message : 'Please, clear your pending order'
@@ -45,8 +44,8 @@ const createOrder = async (req, res) =>{
                 FROM orders
             WHERE customer_id = $1 
                 AND payment_method = $2
-                AND payment_status = $3  
-            `, [customerId, paymentMethod, paymentStatus])
+                AND payment_status = "pending" 
+            `, [customerId, paymentMethod])
         if(placedOrder.rows.length > 1){
             return res.status(400).json({message: 'Order already exist'})
         }
@@ -57,10 +56,10 @@ const createOrder = async (req, res) =>{
           return no available at the moment
         */
        const generateOrder = await db.query(`
-            INSERT INTO orders (customer_id, payment_method, payment_status)
-            VALUES ($1, $2, $3)
+            INSERT INTO orders (customer_id, payment_method)
+            VALUES ($1, $2,)
             RETURNING order_id;
-        `, [customerId, paymentMethod, paymentStatus])
+        `, [customerId, paymentMethod])
 
         const generatedOrderData = {
             orderId : generateOrder.rows[0].order_id,
