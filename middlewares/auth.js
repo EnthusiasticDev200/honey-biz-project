@@ -71,7 +71,7 @@ const requireSuperUser = (req, res, next)=>{
 }
 
 const customerOnly = (req, res, next)=>{
-    if (!req.customerId && !req.isCustomer) {
+    if (!req.customerId && !req.customerUsername) { 
         return res.status(403).json({message:" Sorry! Strictly for customers"})
     }
     next()
@@ -83,59 +83,6 @@ export {
     requireSuperUser, validateJWTAcessToken, 
     validateJWTRefreshToken, customerOnly
 }
-
-/*
-    WORKING
-try{
-        const adminToken = req.cookies.admin_token 
-        const customerToken = req.cookies.customer_token;
-        
-        let decoded;
-        if(adminToken){
-            try{
-                decoded = jwt.verify(adminToken, process.env.JWT_SECRET, {
-                'algorithms' : [`HS256`]
-                })
-                //admin info
-                req.adminId = decoded.adminId || null;
-                req.adminUsername = decoded.adminUsername || null;
-                req.isAdmin = decoded.isAdmin || null;
-                req.role = decoded.role || null;
-            }catch(err){
-                console.warn("Bad token: ", err)
-            } 
-        }
-        if (customerToken){
-            try{
-                decoded = jwt.verify(customerToken, process.env.JWT_SECRET, {
-                'algorithms' : [`HS256`]
-                })
-                //customer info
-                req.customerId = decoded.customerId || null;
-                req.customerUsername = decoded.customerUsername || null;
-                req.isCustomer = decoded.isCustomer || null;
-            }catch(err){
-                console.warn("Bad token: ", err)
-            }   
-        }
-        
-        if(!req.adminId  && !req.customerId ){
-            return res.status(403).json(
-                {message: 'Access denied'})
-        }
-    }catch(err){
-        console.log('Error validating token: ', err)
-        return res.status(500).json({
-            message : "Failed JWT validation",
-            error : err.stack
-        })
-    }
-    next()
-}
-
-
-
-*/
 
 
 
