@@ -2,7 +2,7 @@ import db from "../../config/database.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../../../utils/jwtToken.js";
 import redis from "../../config/redis.js";
-import positiveIntParam from "../../../utils/isPositveInt.js";
+import positiveIntParam from "../../../utils/paramInput.js";
 
 
 
@@ -50,9 +50,7 @@ const registerCustomer = async (req, res) => {
 const loginCustomer = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('customer req: ', req.body)
-    const queryCustomer = await db.query(
-      `
+    const queryCustomer = await db.query(`
       SELECT * FROM customers WHERE email = $1`,
       [email]
     );
@@ -66,18 +64,13 @@ const loginCustomer = async (req, res) => {
       password,
       customer.password_hash
     );
-  
     if (!passwordMatch) return res.status(403).json({message: 'Invalid password'});
-    
     // jwt set-up
     const customerPayload = 
       {
         customerId : customer.customer_id,
         customerUsername : customer.username,
-        
       }
-    console.log("Customer payload: ", customerPayload)
-    
     // uniform name with validateRefreshToken middleware
     const refreshTokenPayload = { customerId : customer.customer_id }
 
@@ -86,14 +79,12 @@ const loginCustomer = async (req, res) => {
       `customer: ${ refreshTokenPayload }`,
       JSON.stringify(customerPayload),
       "EX",
-      7 * 24 * 60 * 1000
+      7 * 24 * 60 * 60
     )
     //generate token
     const accessToken = generateToken.accessToken(customerPayload)
-    console.log('cstomer token: ', accessToken)
-
+  
     const refreshToken = generateToken.refreshToken(refreshTokenPayload)
-    console.log('customer refresh token: ', refreshToken)
 
     // clear previous cookie and set new one
     res.clearCookie('customer_token')
@@ -128,6 +119,7 @@ const loginCustomer = async (req, res) => {
 
 const refreshCustomerToken = async (req, res)=>{
   const customerId = req.customerId
+
   if(!customerId) return res.status(401).json({message: `You're not a customer`})
   console.log('customer Id from refresh token: ', {customerId})
   
@@ -135,15 +127,14 @@ const refreshCustomerToken = async (req, res)=>{
     let customerPayload;
     //check customer info in redis
     const cacheData = await redis.get(`customer: ${customerId}`)
-    console.log('cacheDAta from refreshCustomerToken: ', cacheData)
-
+    
     if(cacheData) {
       customerPayload = JSON.parse(cacheData)
     } 
     // Else, on redis miss, query DB
     const queryCustomer = await db.query(`
       SELECT 
-            customer_id, username, is_customer 
+            customer_id, username
       FROM customers
       WHERE customer_id = $1
       `, [customerId])
@@ -159,7 +150,7 @@ const refreshCustomerToken = async (req, res)=>{
     }
     //update redis
     await redis.set(
-      `customer : ${customerPayload.customerId}`,
+      `customer: ${customerPayload.customerId}`,
       JSON.stringify(customerPayload),
       "EX", 
       7 * 24 * 60 * 60
