@@ -69,16 +69,12 @@ const loginAdmin = async (req, res) => {
         adminUsername : admin.username,
         role : admin.role
       }
-    console.log('admin:payload ', adminPayload)
-    
+
     const refreshTokenPayload = { adminId : admin.admin_id}
 
     const accessToken = generateToken.accessToken(adminPayload)
-    console.log('admin_token: ',accessToken)
-
+  
     const refreshToken = generateToken.refreshToken(refreshTokenPayload)
-    console.log('refreshAdminToken: ', refreshToken)
-
     // Store admin info in Redis
     await redis.set(
       `admin : ${refreshTokenPayload}`,
@@ -86,10 +82,9 @@ const loginAdmin = async (req, res) => {
       "EX",
       7 * 24 * 60 * 60 // 7days
     )
-  
     res.clearCookie('admin_token')
     //Send token to cookie
-    res.cookie('admin_token', accessToken,  // Same token but as adminToken in cookie
+    res.cookie('admin_token', accessToken,
       {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",  
@@ -119,12 +114,12 @@ const loginAdmin = async (req, res) => {
 const refreshAdminToken = async (req, res) =>{
   const adminId = req.adminId 
   if(!adminId) return res.status(401).json({message: 'Unauthorized'})
-  console.log('adminId from refreshAdminToken: ', {adminId})
+  
   try{
     let adminPayload;
     //check redis data
     const cacheData = await redis.get(`admin: ${adminId}`)
-    console.log('admin cacheData: ', cacheData)
+   
     
     if(cacheData){
       console.log('show admin cache: ', cacheData)
@@ -133,7 +128,7 @@ const refreshAdminToken = async (req, res) =>{
     //query DB if redis miss
     const queryAdmin = await db.query(`
       SELECT 
-            admin_id, username, role, is_admin
+            admin_id, username, role
       FROM admins
       WHERE admin_id = $1`, [adminId])
     
@@ -153,8 +148,6 @@ const refreshAdminToken = async (req, res) =>{
       7 * 24 * 60 * 60 //7days
     )
     const newAceesToken = generateToken.accessToken(adminPayload)
-    console.log('admin new Acees token: ', newAceesToken)
-
     //replace old to new acces token
     res.cookie('admin_token', newAceesToken, {
       httpOnly : true,
