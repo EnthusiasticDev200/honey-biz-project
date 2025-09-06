@@ -1,6 +1,6 @@
 import express from 'express'
-import { generateOrderItems } from '../../controllers/authControllers/orderItemControllers.js'
-import { validateJWTAcessToken, customerOnly } from '../../../middlewares/auth.js'
+import { generateOrderItems, myOrderItems, viewOrderItems } from '../../controllers/authControllers/orderItemControllers.js'
+import { validateJWTAcessToken, customerOnly, requireSuperUser } from '../../../middlewares/auth.js'
 
 const router = express.Router()
 
@@ -8,7 +8,12 @@ const router = express.Router()
 
 
 
-router.post('/myItems', validateJWTAcessToken, customerOnly, generateOrderItems)
+router.post('/createitem', validateJWTAcessToken, customerOnly, generateOrderItems)
+
+router.get('/myitem', validateJWTAcessToken, customerOnly, myOrderItems)
+
+//superuser
+router.get(['/view', '/view/order/:order_id'], validateJWTAcessToken, requireSuperUser,viewOrderItems)
 
 
 
@@ -17,7 +22,7 @@ router.post('/myItems', validateJWTAcessToken, customerOnly, generateOrderItems)
 
 
 
-export {router as orderItemRouter}
+export {router as orderItemRoutes}
 
 
 
