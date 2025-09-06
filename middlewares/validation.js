@@ -93,16 +93,16 @@ const productSchema = z.object({
 
 
 // Order creation validation
-const orderSchema = z.object({
-  paymentMethod : z.string()
-  .nonempty()
-  .transform((val)=>{
-    const result = paymentMethodValue(val)
-    if(result instanceof Error) throw result // throws input error
-    return result.toLowerCase()
+// const orderSchema = z.object({
+//   paymentMethod : z.string()
+//   .nonempty()
+//   .transform((val)=>{
+//     const result = paymentMethodValue(val)
+//     if(result instanceof Error) throw result // throws input error
+//     return result.toLowerCase()
 
-  }),
-})
+//   }),
+// })
 
 const validate = schema => (req, res, next)=>{
   try{
@@ -129,7 +129,7 @@ const validate = schema => (req, res, next)=>{
 export const registerAdminValidation = validate(adminRegSchema)
 export const registerCustomerValidation = validate(customerRegSchema)
 export const productValidation = validate(productSchema)
-export const createOrderValidation = validate(orderSchema)
+//export const createOrderValidation = validate(orderSchema)
 
 
 
