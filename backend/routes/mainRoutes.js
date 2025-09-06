@@ -3,7 +3,7 @@ import { adminRoutes } from "./authRoutes/adminRoutes.js";
 import { customerRoutes } from "./authRoutes/customerRoutes.js";
 import { productRoutes } from "./authRoutes/productRoutes.js";
 import { orderRoutes } from "./authRoutes/orderRoutes.js";
-import { orderItemRouter } from "./authRoutes/orderItemRoutes.js";
+import { orderItemRoutes } from "./authRoutes/orderItemRoutes.js";
 
 const router = express.Router()
 
@@ -20,7 +20,7 @@ router.use('/auth/product', productRoutes)
 router.use('/auth/order', orderRoutes)
 
 //orderItems route
-router.use('/auth/orderitems', orderItemRouter)
+router.use('/auth/orderitem', orderItemRoutes)
 
 
 
