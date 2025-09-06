@@ -2,20 +2,11 @@ import db from '../../config/database.js'
 
 import positiveIntParam from '../../../utils/paramInput.js'
 
-const identifyCustomer = req =>{
-    const myId = req.customerId
-    const myUsername = req.customerUsername
-    if(!myId && !myUsername){
-        return new Error("Not a customer")
-    } return [myId, myUsername]
-}
-
 
 
 const createOrder = async (req, res) =>{
     try{
-        const ifCustomer = identifyCustomer(req)
-        const customerId = ifCustomer[0]
+        const customerId = req.customerId
 
         const verifyCustomer = await db.query(`
             SELECT email FROM customers WHERE customer_id = $1`,
@@ -23,50 +14,31 @@ const createOrder = async (req, res) =>{
         if(verifyCustomer.rows.length === 0){
             return res.status(403).json({message: 'Gotcha! Not a customer'})
         }
-        console.log('customerId from Order: ', customerId)
-        const {paymentMethod} = req.body
-
+        
         // Clear pending orders first
         const pendingingOrder = await db.query(`
             SELECT * FROM orders 
             WHERE customer_id = $1
-            AND payment_status = "pending"
+            AND payment_status = 'pending'
          `, [customerId])
          if(pendingingOrder.rows.length === 1){
              return res.status(400).json({
                 message : 'Please, clear your pending order'
              })
         }
-
-        //No duplicate order
-        const placedOrder = await db.query(`
-            SELECT * 
-                FROM orders
-            WHERE customer_id = $1 
-                AND payment_method = $2
-                AND payment_status = "pending" 
-            `, [customerId, paymentMethod])
-        if(placedOrder.rows.length > 1){
-            return res.status(400).json({message: 'Order already exist'})
-        }
         
-       /*2. If not duplicate, ensure stock quantiy in 
-       product > order_items quantity 
-          else 
-          return no available at the moment
-        */
        const generateOrder = await db.query(`
-            INSERT INTO orders (customer_id, payment_method)
-            VALUES ($1, $2,)
+            INSERT INTO orders (customer_id) 
+            VALUES ($1)
             RETURNING order_id;
-        `, [customerId, paymentMethod])
+        `, [customerId])
 
-        const generatedOrderData = {
-            orderId : generateOrder.rows[0].order_id,
-            customerId : generateOrder.rows[0].customer_id,
-            methodOfPayment : generateOrder.rows[0].payment_method,
-            statusPayment : generateOrder.rows[0].payment_status
-        }
+        // const generatedOrderData = {
+        //     orderId : generateOrder.rows[0].order_id,
+        //     customerId : generateOrder.rows[0].customer_id,
+        //     methodOfPayment : generateOrder.rows[0].payment_method,
+        //     statusPayment : generateOrder.rows[0].payment_status
+        // }
         return res.status(201).json({message: 'Order successfully created'})  
     }catch(err){
         console.log("Error creating order: ", err)
@@ -104,7 +76,7 @@ const viewOrders = async (req, res) =>{
                     return res.status(404).json({message:'No order record found'})
                 } return res.status(200).json(getOneOrder.rows[0])
             }catch(err){
-                return res.status(401).json({message: err.message})
+                return res.status(400).json({message: err.message})
             }
         } 
         else if(customer_id){
@@ -127,7 +99,7 @@ const viewOrders = async (req, res) =>{
                     return res.status(404).json({message: 'No order(s) for customer'})
                 } return res.status(200).json(getCustomerOrder.rows)
             }catch(err){
-                return res.status(401).json({message: err.message})
+                return res.status(400).json({message: err.message})
             }
         } else{
             const getAllOrders = await db.query(`
@@ -156,8 +128,7 @@ const viewOrders = async (req, res) =>{
 //works fine. Don't touch
 const customerOrder = async (req, res)=>{
     try{
-        const ifCustomer = identifyCustomer(req)
-        const username = ifCustomer[1]
+        const username = req.customerUsername
         
         const order = await db.query(`
         SELECT 
@@ -187,4 +158,4 @@ const customerOrder = async (req, res)=>{
 }
 
 
-export {identifyCustomer,createOrder, viewOrders, customerOrder}
+export {createOrder, viewOrders, customerOrder}
