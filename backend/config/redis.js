@@ -6,10 +6,12 @@ const redis = new Redis({
     port : 6379
 })
 
-redis.on('connect', () => console.log('Redis is connected'))
-redis.on('error', (err)=> console.log('Redis failed: ', err))
-
-
+redis.on('connect', (err) => {
+    err 
+    ?  console.log('Redis failed: ', err)
+    :  console.log('Redis is Connected') }
+)
+    
 export default redis
 
 

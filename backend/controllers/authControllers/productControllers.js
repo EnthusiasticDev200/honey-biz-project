@@ -11,7 +11,7 @@ const createProduct = async (req, res) =>{
         const existingProduct = await db.query(`
             SELECT * FROM products WHERE product_name = $1`, [productName])
         if(existingProduct.rows.length > 0){
-            return res.status(400).json(
+            return res.status(409).json(
                 {message: 'Product already exist'})
         }
         await db.query(`

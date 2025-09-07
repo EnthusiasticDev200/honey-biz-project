@@ -24,7 +24,7 @@ const registerCustomer = async (req, res) => {
       [email]
     );
     if (existingCustomer.rows.length > 0)
-      return res.status(403).json({
+      return res.status(409).json({
         message: "Customer already exist",
       });
 
@@ -55,7 +55,7 @@ const loginCustomer = async (req, res) => {
       [email]
     );
     if (queryCustomer.rows.length === 0) {
-      return res.status(400).json({ message: "Not an customer" })
+      return res.status(401).json({ message: "Not an customer" })
       };
     // capture the customer
     const customer = queryCustomer.rows[0]
@@ -64,7 +64,7 @@ const loginCustomer = async (req, res) => {
       password,
       customer.password_hash
     );
-    if (!passwordMatch) return res.status(403).json({message: 'Invalid password'});
+    if (!passwordMatch) return res.status(401).json({message: 'Invalid password'});
     // jwt set-up
     const customerPayload = 
       {
@@ -121,7 +121,6 @@ const refreshCustomerToken = async (req, res)=>{
   const customerId = req.customerId
 
   if(!customerId) return res.status(401).json({message: `You're not a customer`})
-  console.log('customer Id from refresh token: ', {customerId})
   
   try{
     let customerPayload;

@@ -20,7 +20,7 @@ const registerAdmin = async (req, res) => {
       [email]
     );
     if (existingAdmin.rows.length > 0)
-      return res.status(403).json({
+      return res.status(409).json({
         message: "Admin already exist",
       });
 
@@ -52,14 +52,14 @@ const loginAdmin = async (req, res) => {
       [email]
     );
     if (checkAdmin.rows.length === 0){
-      return res.status(400).json({ message: "Not an admin" });
+      return res.status(401).json({ message: "Not an admin" });
     } 
     // capture admin
     const admin = checkAdmin.rows[0];
     const passwordMatch = await bcrypt.compare(password, admin.password_hash);
 
     if (!passwordMatch){
-      return res.status(403).json({
+      return res.status(401).json({
         message: "Oops! wrong password",
       });
     }
@@ -170,7 +170,7 @@ const refreshAdminToken = async (req, res) =>{
 const logoutAdmin = (req, res)=>{
   try{
       const adminUsername = req.adminUsername
-      if(!adminUsername) return res.status(403).json({
+      if(!adminUsername) return res.status(401).json({
         message: 'Not permitted'})
       res.clearCookie('admin_token')
       res.clearCookie('refresh_admin_token')

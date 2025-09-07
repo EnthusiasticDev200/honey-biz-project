@@ -22,7 +22,7 @@ const createOrder = async (req, res) =>{
             AND payment_status = 'pending'
          `, [customerId])
          if(pendingingOrder.rows.length === 1){
-             return res.status(400).json({
+             return res.status(409).json({
                 message : 'Please, clear your pending order'
              })
         }
@@ -145,7 +145,7 @@ const customerOrder = async (req, res)=>{
 
         const myOrder = order.rows
         if(myOrder.length === 0){
-            return res.status(200).json({message: 'You have no order'})
+            return res.status(204).json({message: 'You have no order'})
         }
         return res.status(200).json([myOrder])
     }catch(err){

@@ -1,6 +1,7 @@
 import  dotenv  from 'dotenv';
 import db from '../../config/database.js';
 import positiveIntParam from '../../../utils/paramInput.js'
+import redis from '../../config/redis.js';
 
 dotenv.config()
 
@@ -35,17 +36,21 @@ const generateOrderItems = async (req, res)=>{
                 message : `${productName} is sold for ${productPrice}`
             })
         }
-        //extract orderId
+        
         const myOrder = await db.query(`
-            SELECT order_id FROM orders WHERE customer_id = $1
+            SELECT order_id, created_at FROM orders WHERE customer_id = $1
             `, [customerId])
-        if(myOrder.rows.length === 0){
+
+        //extract orderId
+        const orderId = myOrder.rows[0].order_id;
+        const orderDate = myOrder.rows[0].created_at
+        
+        if(orderDate < new Date()){
             return res.status(400).json({
-                message: "You haven't placed any order"
+                message: "Sorry, You haven't placed a new order"
             })
         }
-        const orderId = myOrder.rows[0].order_id;
-
+      
         //No duplicate order_items
         const existingOrderItems = await db.query(`
             SELECT * 
@@ -56,7 +61,7 @@ const generateOrderItems = async (req, res)=>{
                     AND unit_price = $4
             `, [productId, orderId, quantity, unitPrice])
         if(existingOrderItems.rows.length === 1){
-            return res.status(400).json({
+            return res.status(409).json({
                 message: 'Order items already generated'
             })
         }
@@ -64,20 +69,36 @@ const generateOrderItems = async (req, res)=>{
             INSERT INTO order_items 
                 (order_id, product_id, quantity, unit_price)
             VALUES($1, $2, $3, $4)
-            RETURNING order_item_id;`
+            RETURNING order_item_id, order_id, product_id, quantity;`
             ,[orderId, productId, quantity, unitPrice])
         // extract createdOrderItems data
         const orderItems = createOrderItem.rows[0]
         
-        // for socketIO to update product quantity
+        // orderItemData for redis and socketIO
         const OrderItemsData = {
-            orderItemsId : orderItems.order_items_id,
-            productId : orderItems.product_id,
+            orderItemsId : orderItems.order_item_id,
             orderId : orderItems.order_id,
+            productId : orderItems.product_id,
             quantity : orderItems.quantity
         }
         console.log("orderItemsData: ", OrderItemsData)
+
+        // Update products table
+        await db.query(`
+            UPDATE products
+                SET stock_quantity = stock_quantity - $1
+            WHERE product_id = $2`,
+            [quantity, productId]);
     
+        //store in redis
+        await redis.hset(
+            `order: ${OrderItemsData.orderId}`, //key
+            OrderItemsData.orderItemsId,        //field
+            JSON.stringify({                    //values
+                productId : OrderItemsData.productId,
+                quantity : OrderItemsData.quantity
+            })
+        )
          
         return res.status(201).json({
             message:'Order items created successfully'})
@@ -89,6 +110,7 @@ const generateOrderItems = async (req, res)=>{
         })
     }
 }
+
 const myOrderItems = async (req, res)=>{
     const customerId = req.customerId
     const customerUsername = req.customerUsername
@@ -129,7 +151,7 @@ const myOrderItems = async (req, res)=>{
 const viewOrderItems = async (req, res) =>{
     const { order_id } = req.params
     const role = req.role
-    if(role !== process.env.SUPER_USER) return res.status(401).json({
+    if(role !== process.env.SUPER_USER) return res.status(403).json({
         message : "Only for super users"
     })
     try{
@@ -149,7 +171,7 @@ const viewOrderItems = async (req, res) =>{
                     ORDER BY order_id DESC
                     `, [orderId])
                 if(getOrderItem.rows.length === 0){
-                    return res.status(200).json({
+                    return res.status(404).json({
                         message: "No order items record for this customer"})
                 }return res.status(200).json(getOrderItem.rows)
             }catch(err){
