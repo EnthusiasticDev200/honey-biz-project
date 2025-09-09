@@ -70,6 +70,13 @@ const requireSuperUser = (req, res, next)=>{
     next()
 }
 
+const adminOnly = (req, res, next)=>{
+    if(!req.adminId && !req.isAdmin){
+        return res.status(403).json({message:" Sorry! Strictly for admins"})
+    }
+    next()
+}
+
 const customerOnly = (req, res, next)=>{
     if (!req.customerId && !req.customerUsername) { 
         return res.status(403).json({message:" Sorry! Strictly for customers"})
@@ -78,10 +85,12 @@ const customerOnly = (req, res, next)=>{
 }
 
 
+
 export {
 
     requireSuperUser, validateJWTAcessToken, 
-    validateJWTRefreshToken, customerOnly
+    validateJWTRefreshToken, customerOnly,
+    adminOnly
 }
 
 
