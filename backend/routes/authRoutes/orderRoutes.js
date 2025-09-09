@@ -1,5 +1,5 @@
 import express  from "express";
-import { createOrder, viewOrders, customerOrder } from "../../controllers/authControllers/orderControllers.js";
+import { createOrder, viewOrders, customerOrder, orderCheckOut, verifyPayment } from "../../controllers/authControllers/orderControllers.js";
 import { customerOnly, requireSuperUser, validateJWTAcessToken } from "../../../middlewares/auth.js";
 //import { createOrderValidation } from "../../../middlewares/validation.js";
 
@@ -14,7 +14,9 @@ router.get(
 
 router.get('/myorder', validateJWTAcessToken, customerOnly, customerOrder)
 
+router.post('/myorder/:order_id/checkout', validateJWTAcessToken, customerOnly, orderCheckOut)
 
+router.post('/myorder/:order_id/verify', validateJWTAcessToken, customerOnly, verifyPayment)
 
 export {router as orderRoutes}
 
