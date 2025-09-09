@@ -8,12 +8,13 @@ const createReview = async (req,res)=>{
     try{
         const idCustomer = await db.query(`
             SELECT customer_id, first_name, last_name, email  
-            FROM customers
+                FROM customers
             WHERE email = $1
-            `, [email])
+                AND customer_id =  $2
+            `, [email, customerId])
         if(idCustomer.rows.length === 0){
-            return res.status(404).json({
-                message : 'Not a customer'
+            return res.status(400).json({
+                message : 'Impersonation not allowed'
             })
         }
         const checkReview = await db.query(`
@@ -23,8 +24,8 @@ const createReview = async (req,res)=>{
             message : "Review already created"
         })
         await db.query(`
-            INSERT INTO reviews 
-            VALUES (feedback, ratng)`, [feedback, rating])
+            INSERT INTO reviews (customer_id, feedback, rating)
+            VALUES ($1, $2, $3)`, [customerId, feedback, rating])
         return res.status(201).json({message: "Review successfully created"})
     }catch(err){
         console.log("Error occurred creating review: ", err)
