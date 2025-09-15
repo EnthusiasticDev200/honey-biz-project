@@ -87,10 +87,8 @@ const customerOnly = (req, res, next)=>{
 
 
 export {
-
-    requireSuperUser, validateJWTAcessToken, 
-    validateJWTRefreshToken, customerOnly,
-    adminOnly
+    requireSuperUser, validateJWTAcessToken, validateJWTRefreshToken, 
+    customerOnly, adminOnly
 }
 
 
