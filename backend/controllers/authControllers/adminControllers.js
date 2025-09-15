@@ -254,10 +254,9 @@ const changeAdminPassword = async (req, res) =>{
       message : "Not an admin"
     })
     const adminId = checkAdmin.rows[0].admin_id
-    console.log('adminId: ',adminId)
+   
     //check redis
     const cachedOTP = await redis.get(`otp:${email}`)
-    console.log('admin cachedData: ', cachedOTP)
     if(!cachedOTP || cachedOTP === null){
       return res.status(400).json({
         message: "OTP verification needed"})
