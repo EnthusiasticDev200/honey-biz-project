@@ -1,5 +1,5 @@
 import db from '../../config/database.js'
-
+import paystack from '../../config/paystack.js'
 import positiveIntParam from '../../../utils/paramInput.js'
 
 
@@ -49,7 +49,7 @@ const createOrder = async (req, res) =>{
     }
 }
 
-//Good. Do not touch
+
 const viewOrders = async (req, res) =>{
     const { order_id } = req.params
     const { customer_id } = req.params
@@ -157,5 +157,141 @@ const customerOrder = async (req, res)=>{
     }
 }
 
+const orderCheckOut = async (req, res) =>{
+    const { email } = req.body
+    const { order_id } = req.params
+    const username = req.customerUsername
+   
 
-export {createOrder, viewOrders, customerOrder}
+    try{
+        const verifyCustomerEmail = await db.query(`
+            SELECT email FROM customers WHERE email = $1`, [email])
+        if(verifyCustomerEmail.rows.length === 0) return res.status(404).json({
+            message : 'Unrecognized email'
+        })
+        try{
+            const orderId = positiveIntParam(order_id)
+            // Protect customer's order
+            const checkOrder = await db.query(`
+                SELECT 
+                    order_id, username, payment_status
+                FROM orders
+                JOIN customers USING (customer_id)
+                WHERE order_id = $1
+                    AND username = $2`, [orderId, username])
+
+            if(checkOrder.rows.length === 0) return res.status(404).json({
+                message : "Order not created with your details"
+            })
+            const order = checkOrder.rows[0]
+
+            if(order.payment_status !== 'pending') return res.status(400).json({
+                message : ' Order has already been processed'
+            })
+            //extract amount from order_items table
+            const totalAmount = await db.query(`
+                SELECT 
+                        SUM(amount) AS total_amount
+                FROM order_items
+                WHERE order_id = $1
+                GROUP BY order_id`, [orderId])
+            
+            if (totalAmount.rows.length === 0) {
+                return res.status(400).json({ message: "No items found for this order" });
+            }
+            
+            const amount = totalAmount.rows[0].total_amount
+
+            const reference = `ORDER_${orderId}_${Date.now()}`
+            
+            //Initialize Paystack transaction
+            const response = await paystack.post("/transaction/initialize", {
+                email, 
+                amount: amount * 100, // Paystack uses kobo (multiply by 100)
+                reference: reference,
+                callback_url: `${process.env.BASE_URL}/api/auth/orders/${orderId}/verify?reference=${reference}}`,
+            });
+            return res.status(200).json({
+                authorization_url: response.data.data.authorization_url,
+                reference: response.data.data.reference,
+            });
+         }catch(err){
+                console.log("Input param not a number: ", err)
+                return res.status(400).json({error: err.message})
+            }
+    }catch(err){
+        console.log('Order checkout operation failed: ', err)
+        return res.status(500).json({
+            message : "Error occurred processiong order checkout",
+            error : err.stack
+        })
+    }
+}
+
+const verifyPayment = async (req, res) =>{
+    const { order_id } = req.params
+
+    //const { reference } = req.query  <- uncomment when using frontend
+    
+    const reference = "ORDER_4_1757367255435"
+    try{
+        if(!reference) return res.status(400).json({
+            message : "No payment reference found" })
+
+        try{
+            const orderId = positiveIntParam(order_id)
+           
+            // Check if payment has already been verified
+            const checkOrder = await db.query(`
+                SELECT payment_status, total_amount 
+                    FROM orders 
+                WHERE order_id = $1`, [orderId])
+            
+            const clearedOrder = checkOrder.rows[0]
+            if( clearedOrder.payment_status == 'confirmed' 
+                && clearedOrder.total_amount !== '')
+            return res.status(409).json({
+                message: 'Order payment already verified'})
+
+            // verify transaction from paystack
+            const response = await paystack.get(`/transaction/verify/${reference}`)
+            
+            const paymentData = response.data.data
+               
+            if(paymentData.status === 'success'){
+            //update order's table
+            await db.query(`
+                UPDATE orders
+                    SET payment_method = $1,
+                        total_amount = $2,
+                        payment_status = $3,
+                        updated_at = NOW()
+                WHERE order_id = $4`, 
+                [paymentData.channel, paymentData.amount / 100, 
+                    "confirmed", orderId])
+            return res.status(200).json({
+                    message : "Payment was successful",
+                    payment : paymentData })}
+            else{
+                return res.status(400).json({message:"Unsuccessful payment"})}
+            }catch(err){
+                console.log("Invalid input param: ", err)
+                return res.status(400).json({
+                    error : err.message
+                })
+            }
+    }catch(err){
+        console.log("Error verifying payment: ", err)
+        return res.status(500).json({
+            message : "Payment verification failed",
+            error : err.stack
+        })
+    }
+}
+
+export {
+    createOrder, viewOrders, customerOrder,
+    orderCheckOut, verifyPayment
+    
+    }
+

@@ -17,6 +17,15 @@ const createReview = async (req,res)=>{
                 message : 'Impersonation not allowed'
             })
         }
+        const checkOrder = await db.query(`            
+            SELECT customer_id, payment_status
+            FROM orders
+            WHERE customer_id = $1
+            AND payment_status = 'confirmed' 
+            `, [customerId])
+        if(checkOrder.rows.length === 0) return res.status(404).json({
+            message : "Sorry! You can't leave a review. Order record not confirmed"
+        })
         const checkReview = await db.query(`
             SELECT * FROM reviews WHERE customer_id = $1`,
             [customerId])
