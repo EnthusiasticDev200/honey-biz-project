@@ -184,9 +184,113 @@ const logoutAdmin = (req, res)=>{
   }
 }
 
+const updateAdminProfile = async(req,res)=>{
+    const adminId = req.adminId
+    const { email, newPhoneNumber, newEmail} = req.body
+
+    let adminProfile
+    try{
+        const cacheData = await redis.get(`admin: ${adminId}`)
+        //on redis get
+        if(cacheData){
+          adminProfile = JSON.parse(cacheData)
+        }
+        //on redis misss
+        const checkAdmin = await db.query(`
+            SELECT 
+                  admin_id, username
+            FROM admins
+            WHERE admin_id = $1
+              AND  email = $2`, [adminId, email])
+        if(checkAdmin.rows.length === 0) return res.status(404).json({
+          message : "Admin details not found"
+        })
+        const admin = checkAdmin.rows[0]
+        const adminData = {
+          adminId : admin.admin_id,
+          username : admin.username
+        }
+        const updateAdminProfile = await db.query(`
+            SELECT 
+                  email, phone_number 
+            FROM admins
+            WHERE admin_id = $1   
+            AND email = $2 
+            `, [adminId, newEmail])
+        if(updateAdminProfile.rows.length > 0) return res.status(409).json({
+          message : " Data already updated"
+        })
+        await db.query(`
+              UPDATE admins
+                  SET email = $1, 
+                      phone_number = $2
+              WHERE admin_id = $3`, [newEmail, newPhoneNumber, adminId])
+        // update redis
+        await redis.set(`
+          admin: ${adminData.adminId}`,
+          JSON.stringify({
+            username : adminData.username
+          })
+        )
+        return res.status(200).json({message: 'Admin data succesfully updated'})
+
+    }catch(err){
+        console.log("Error occurred updating admin profile: ", err)
+        return res.status(500).json({
+          message : "Encountered error updating admin profile",
+          error : err.stack
+        })
+      }
+}
+
+
+//change admin password
+const changeAdminPassword = async (req, res) =>{
+  const { email, newPassword } = req.body
+  try{
+    const checkAdmin = await db.query(`
+      SELECT admin_id, email FROM admins WHERE email = $1`, [email])
+    if(checkAdmin.rows.length === 0) return res.status(401).json({
+      message : "Not an admin"
+    })
+    const adminId = checkAdmin.rows[0].admin_id
+    console.log('adminId: ',adminId)
+    //check redis
+    const cachedOTP = await redis.get(`otp:${email}`)
+    console.log('admin cachedData: ', cachedOTP)
+    if(!cachedOTP || cachedOTP === null){
+      return res.status(400).json({
+        message: "OTP verification needed"})
+    }
+    const otpData = JSON.parse(cachedOTP)
+    if(otpData.email !== email){
+      return res.status(401).json({message:"Email mismatch"})
+    }
+
+    const salt = await bcrypt.genSalt(10)
+    const hashedPassword = await bcrypt.hash(newPassword,salt)
+    const updatedPassword = await db.query(`
+        SELECT password_hash FROM admins 
+        WHERE password_hash = $1`, [hashedPassword])
+    if(updatedPassword.rows.length > 0) return res.status(409).json({
+        message : "Password already updated"
+    })
+  await db.query(`
+      UPDATE admins
+      SET password_hash = $1
+      WHERE admin_id = $2`, [hashedPassword, adminId])
+    return res.status(200).json({message: "Password successfully updated"})
+  }catch(err){
+    console.log("Error updating admin password: ", err)
+    return res.status(500).json({
+      message: "Updating admin password failed",
+      error : err.stack
+    })
+  }
+}
 
 
 export { 
   registerAdmin, loginAdmin, logoutAdmin, 
-  refreshAdminToken 
+  refreshAdminToken, updateAdminProfile, changeAdminPassword
 };
