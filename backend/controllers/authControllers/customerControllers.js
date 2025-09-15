@@ -156,12 +156,11 @@ const refreshCustomerToken = async (req, res)=>{
     )
     const customerNewToken = generateToken.accessToken(customerPayload)
     
-    console.log('customerNewToken: ', customerNewToken)
     //replace old to new access token
     res.cookie('customer_token', customerNewToken, {
       httpOnly : true,
       secure : process.env.NODE_ENV === 'production',
-      sameSite : "strict",
+      sameSite : process.env.NODE_ENV === 'production' ? "None" : "Lax",
       path : '/',
       maxAge : 5 * 60 * 1000
     })
@@ -234,7 +233,113 @@ const viewCustomers = async (req, res) => {
     }
   };
 
+  const changeCustomerPassword = async (req, res)=>{
+      const { email, newPassword } = req.body
+      
+      try{
+          const checkCustomer = await db.query(`
+            SELECT email, customer_id
+            FROM customers
+            WHERE email = $1
+            `, [email])
+          if(checkCustomer.rows.length === 0){
+            return res.status(404).json({
+              message: 'Not a customer'})
+          }
+          const customerId = checkCustomer.rows[0].customer_id
+
+          const cachedOTP = await redis.get(`otp:${email}`)
+          const otp = JSON.parse(cachedOTP)
+          
+          // ensure OTP email matches email
+          if(otp.email !== email) {
+              return res.status(401).json({
+              message : "OTP email mismatches with yours"
+            })
+          }
+          const salt = await bcrypt.genSalt(10)
+          const hashedPassword = await bcrypt.hash(newPassword, salt)
+          const updatedPassword = await db.query(`
+            SELECT password_hash FROM customers 
+            WHERE password_hash = $1`, [hashedPassword])
+          if(updatedPassword.rows.length > 0) return res.status(409).json({
+            message : "Password already updated"
+          })
+          //update password
+          await db.query(`
+            UPDATE customers
+            SET password_hash = $1
+            WHERE customer_id = $2`, [hashedPassword, customerId])
+          return res.status(200).json({message: "Password successfully upated"})
+      }catch(err){
+          console.log("Error occurred updating password", err)
+          return res.status(500).json({
+            message : "Updating password failed",
+            error : err.stack
+          })
+      }
+  }
+
+const updateCustomerProfile = async(req,res)=>{
+    const customerId = req.customerId
+    const { email, newPhoneNumber, newEmail} = req.body
+
+    let customerProfile
+    try{
+        const cacheData = await redis.get(`customer: ${customerId}`)
+        //on redis get
+        if(cacheData){
+          customerProfile = JSON.parse(cacheData)
+        }
+        //on redis misss
+        const checkCustomer = await db.query(`
+            SELECT 
+                  customer_id, username
+            FROM customers
+            WHERE customer_id = $1
+              AND  email = $2`, [customerId, email])
+        if(checkCustomer.rows.length === 0) return res.status(404).json({
+          message : "Customer details not found"
+        })
+        const customer = checkCustomer.rows[0]
+        const customerData = {
+          customerId : customer.customer_id,
+          username : customer.username
+        }
+        const updateCustomerProfile = await db.query(`
+            SELECT 
+                  email, phone_number 
+            FROM customers
+            WHERE customer_id = $1   
+            AND email = $2 
+            `, [customerId, newEmail])
+        if(updateCustomerProfile.rows.length > 0) return res.status(409).json({
+          message : " Data already updated"
+        })
+        await db.query(`
+              UPDATE customers
+                  SET email = $1, 
+                      phone_number = $2
+              WHERE customer_id = $3`, [newEmail, newPhoneNumber, customerId])
+        // update redis
+        await redis.set(`
+          customer: ${customerData.customerId}`,
+          JSON.stringify({
+            username : customerData.username
+          })
+        )
+        return res.status(200).json({message: 'Customer data succesfully updated'})
+
+    }catch(err){
+        console.log("Error occurred updating customer profile: ", err)
+        return res.status(500).json({
+          message : "Encountered error updating customer profile",
+          error : err.stack
+        })
+      }
+}
+
 export { 
-  registerCustomer, viewCustomers, loginCustomer,
-  refreshCustomerToken,logoutCustomer
+  registerCustomer, viewCustomers, loginCustomer, updateCustomerProfile,
+  refreshCustomerToken,logoutCustomer, changeCustomerPassword
   };

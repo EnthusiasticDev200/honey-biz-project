@@ -1,11 +1,13 @@
 import express from "express";
 import {
     loginCustomer, logoutCustomer, registerCustomer, refreshCustomerToken,
-    viewCustomers
+    viewCustomers,
+    changeCustomerPassword,
+    updateCustomerProfile
         } 
     from '../../controllers/authControllers/customerControllers.js'
-import { validateJWTAcessToken, validateJWTRefreshToken,requireSuperUser } from "../../../middlewares/auth.js";
-import { registerCustomerValidation } from "../../../middlewares/validation.js";
+import { validateJWTAcessToken, validateJWTRefreshToken,requireSuperUser, customerOnly } from "../../../middlewares/auth.js";
+import { registerCustomerValidation, updatePasswordValidation, updateProfileValidation } from "../../../middlewares/validation.js";
 
 const router = express.Router()
 
@@ -16,7 +18,9 @@ router.post('/refresh', validateJWTRefreshToken, refreshCustomerToken)
 router.get('/logout', validateJWTAcessToken, logoutCustomer)
 router.get(["/view", "/view/:customer_id"], validateJWTAcessToken, requireSuperUser, viewCustomers) 
 
+router.patch('/password/update', updatePasswordValidation, changeCustomerPassword)
 
+router.patch('/profile/update', updateProfileValidation, updateCustomerProfile)
 
 
 
