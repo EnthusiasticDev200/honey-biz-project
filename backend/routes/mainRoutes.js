@@ -5,6 +5,7 @@ import { productRoutes } from "./authRoutes/productRoutes.js";
 import { orderRoutes } from "./authRoutes/orderRoutes.js";
 import { orderItemRoutes } from "./authRoutes/orderItemRoutes.js";
 import { reviewRouter } from "./authRoutes/reviewRoutes.js";
+import { otpRouter } from "./authRoutes/otpRoutes.js";
 
 const router = express.Router()
 
@@ -25,6 +26,8 @@ router.use('/auth/orderitem', orderItemRoutes)
 
 //reviews route
 router.use('/auth/review', reviewRouter)
+
+router.use('/auth/otp', otpRouter)
 
 
 
