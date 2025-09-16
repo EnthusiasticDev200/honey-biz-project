@@ -17,7 +17,7 @@ router.post('/create', validateJWTAcessToken, customerOnly, createReview )
 
 
 
-export {router as reviewRouter}
+export {router as reviewRoutes}
 
 
 
