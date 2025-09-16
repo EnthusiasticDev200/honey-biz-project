@@ -24,7 +24,6 @@ const generateOrderItems = async (req, res)=>{
         const stockQuantity = queryProduct.rows[0].stock_quantity
         
         const productPrice = queryProduct.rows[0].price
-        console.log("productNames in productsDB: ", productPrice)
         
         if(quantity > stockQuantity){
             return res.status(400).json(
