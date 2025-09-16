@@ -5,15 +5,6 @@ import redis from "../../config/redis.js";
 import positiveIntParam from "../../../utils/paramInput.js";
 
 
-
-
-
-
-
-
-
-
-
 //register customer
 const registerCustomer = async (req, res) => {
   try {
@@ -92,7 +83,7 @@ const loginCustomer = async (req, res) => {
       {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",  
-        sameSite: "strict",  
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",  
         path: "/",         
         maxAge: 5 * 60 * 1000 // 5mins
       })
@@ -102,7 +93,7 @@ const loginCustomer = async (req, res) => {
       {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",  
-        sameSite: "strict",  
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",  
         path: "/",         
         maxAge: 24 * 60 * 60 * 1000 //24hrs 
       })
@@ -249,27 +240,28 @@ const viewCustomers = async (req, res) => {
           const customerId = checkCustomer.rows[0].customer_id
 
           const cachedOTP = await redis.get(`otp:${email}`)
+          if(!cachedOTP || cachedOTP === null) return res.status(401).json({
+            message : "OTP verification needed"
+          })
+          
           const otp = JSON.parse(cachedOTP)
           
           // ensure OTP email matches email
-          if(otp.email !== email) {
-              return res.status(401).json({
+          if(otp.email !== email) return res.status(401).json({
               message : "OTP email mismatches with yours"
             })
-          }
+          if(!otp.verified) return res.status(401).json({
+            message : "OTP not yet verified"
+          })
           const salt = await bcrypt.genSalt(10)
           const hashedPassword = await bcrypt.hash(newPassword, salt)
-          const updatedPassword = await db.query(`
-            SELECT password_hash FROM customers 
-            WHERE password_hash = $1`, [hashedPassword])
-          if(updatedPassword.rows.length > 0) return res.status(409).json({
-            message : "Password already updated"
-          })
           //update password
           await db.query(`
             UPDATE customers
             SET password_hash = $1
             WHERE customer_id = $2`, [hashedPassword, customerId])
+
+          await redis.del(`otp:${email}`)
           return res.status(200).json({message: "Password successfully upated"})
       }catch(err){
           console.log("Error occurred updating password", err)
@@ -282,8 +274,9 @@ const viewCustomers = async (req, res) => {
 
 const updateCustomerProfile = async(req,res)=>{
     const customerId = req.customerId
-    const { email, newPhoneNumber, newEmail} = req.body
-
+    
+    const { newPhoneNumber, newEmail } = req.body
+    
     let customerProfile
     try{
         const cacheData = await redis.get(`customer: ${customerId}`)
@@ -296,10 +289,10 @@ const updateCustomerProfile = async(req,res)=>{
             SELECT 
                   customer_id, username
             FROM customers
-            WHERE customer_id = $1
-              AND  email = $2`, [customerId, email])
+            WHERE customer_id = $1`, [customerId])
+        
         if(checkCustomer.rows.length === 0) return res.status(404).json({
-          message : "Customer details not found"
+              message : "Customer details not found"
         })
         const customer = checkCustomer.rows[0]
         const customerData = {
@@ -311,14 +304,15 @@ const updateCustomerProfile = async(req,res)=>{
                   email, phone_number 
             FROM customers
             WHERE customer_id = $1   
-            AND email = $2 
-            `, [customerId, newEmail])
+            AND email = $2
+            AND phone_number = $3
+            `, [customerId, newEmail, newPhoneNumber])
         if(updateCustomerProfile.rows.length > 0) return res.status(409).json({
           message : " Data already updated"
         })
         await db.query(`
               UPDATE customers
-                  SET email = $1, 
+                  SET email = $1,
                       phone_number = $2
               WHERE customer_id = $3`, [newEmail, newPhoneNumber, customerId])
         // update redis
