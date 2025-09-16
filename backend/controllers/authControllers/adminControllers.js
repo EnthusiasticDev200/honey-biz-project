@@ -88,14 +88,14 @@ const loginAdmin = async (req, res) => {
       {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",  
-        sameSite: "strict",  
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",  
         path: "/",         
         maxAge: 5 * 60 * 1000 //5mins
       })
     res.cookie('refresh_admin_token', refreshToken, {
         httpOnly: true, 
         secure: process.env.NODE_ENV === "production",  
-        sameSite: "strict",  
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",  
         path: "/",         
         maxAge: 24 * 60 * 60 * 1000 // 24hrs
     })
@@ -152,7 +152,7 @@ const refreshAdminToken = async (req, res) =>{
     res.cookie('admin_token', newAceesToken, {
       httpOnly : true,
       secure : process.env.NODE_ENV === 'production',
-      sameSite : "strict",
+      sameSite : process.env.NODE_ENV === 'production' ? "None" : "Lax",
       path : '/' ,
       maxAge : 10 * 60 *1000
     })
@@ -186,7 +186,7 @@ const logoutAdmin = (req, res)=>{
 
 const updateAdminProfile = async(req,res)=>{
     const adminId = req.adminId
-    const { email, newPhoneNumber, newEmail} = req.body
+    const { newPhoneNumber, newEmail} = req.body
 
     let adminProfile
     try{
@@ -200,8 +200,7 @@ const updateAdminProfile = async(req,res)=>{
             SELECT 
                   admin_id, username
             FROM admins
-            WHERE admin_id = $1
-              AND  email = $2`, [adminId, email])
+            WHERE admin_id = $1`, [adminId])
         if(checkAdmin.rows.length === 0) return res.status(404).json({
           message : "Admin details not found"
         })
@@ -246,17 +245,19 @@ const updateAdminProfile = async(req,res)=>{
 
 //change admin password
 const changeAdminPassword = async (req, res) =>{
-  const { email, newPassword } = req.body
+  const {email, newPassword} = req.body
+  
   try{
     const checkAdmin = await db.query(`
-      SELECT admin_id, email FROM admins WHERE email = $1`, [email])
+      SELECT admin_id, password_hash, email FROM admins WHERE email = $1`, [email])
     if(checkAdmin.rows.length === 0) return res.status(401).json({
       message : "Not an admin"
     })
     const adminId = checkAdmin.rows[0].admin_id
-   
+    
     //check redis
     const cachedOTP = await redis.get(`otp:${email}`)
+    
     if(!cachedOTP || cachedOTP === null){
       return res.status(400).json({
         message: "OTP verification needed"})
@@ -265,19 +266,19 @@ const changeAdminPassword = async (req, res) =>{
     if(otpData.email !== email){
       return res.status(401).json({message:"Email mismatch"})
     }
-
+    if(!otpData.verified) return res.status(401).json({
+      message : "OTP not yet verified"
+    })
+    //create new password
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(newPassword,salt)
-    const updatedPassword = await db.query(`
-        SELECT password_hash FROM admins 
-        WHERE password_hash = $1`, [hashedPassword])
-    if(updatedPassword.rows.length > 0) return res.status(409).json({
-        message : "Password already updated"
-    })
-  await db.query(`
-      UPDATE admins
-      SET password_hash = $1
-      WHERE admin_id = $2`, [hashedPassword, adminId])
+    //update DB
+    await db.query(`
+        UPDATE admins
+        SET password_hash = $1
+        WHERE admin_id = $2`, [hashedPassword, adminId])
+    //delete OTP from Redis
+    await redis.del(`otp:${email}`)
     return res.status(200).json({message: "Password successfully updated"})
   }catch(err){
     console.log("Error updating admin password: ", err)
