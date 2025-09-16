@@ -4,7 +4,7 @@ import
     updateAdminProfile, changeAdminPassword} 
     from '../../controllers/authControllers/adminControllers.js';
 import { adminOnly, validateJWTAcessToken, validateJWTRefreshToken} from "../../../middlewares/auth.js";
-import { registerAdminValidation, updatePasswordValidation, updateProfileValidation } from "../../../middlewares/validation.js";
+import { registerAdminValidation, updatePasswordValidation } from "../../../middlewares/validation.js";
 
 
 
@@ -20,7 +20,7 @@ router.post('/login', loginAdmin)
 router.get('/logout', validateJWTAcessToken,logoutAdmin)
 router.post('/refresh', validateJWTRefreshToken, refreshAdminToken)
 
-router.patch('/profile/update', updateProfileValidation,validateJWTAcessToken, adminOnly, updateAdminProfile)
+router.patch('/profile/update',validateJWTAcessToken, adminOnly, updateAdminProfile)
 router.patch('/password/update', updatePasswordValidation,changeAdminPassword)
 
 
