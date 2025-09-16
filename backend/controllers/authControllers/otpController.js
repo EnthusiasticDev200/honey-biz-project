@@ -6,7 +6,7 @@ import generateOTP from '../../../utils/otp.js'
 
 const sendOtp = async (req, res)=>{
     const {email} = req.body
-    console.log("email: ", email)
+    
     try{
         //remember to add zod verification
         const [checkAdminEmail, checkCustomerEmail] = await Promise.all([
@@ -22,7 +22,8 @@ const sendOtp = async (req, res)=>{
         const otp = generateOTP() 
         const payloadOTP = {
             email : email,
-            otp : otp
+            otp : otp,
+            verified : false
         }
         await redis.set(`otp:${email}`,
             JSON.stringify(payloadOTP),
@@ -60,8 +61,14 @@ const verifyOtp = async(req, res)=>{
         if(dataOTP.otp !== inputOTP) return res.status(401).json({
             message : "Invalid or Expired OTP"
         })
-        //delete after use
-        //await redis.del(`otp: ${email}`)
+        //update redis verified
+        dataOTP.verified = true 
+        await redis.set(`otp:${email}`, 
+            JSON.stringify(dataOTP),
+            'EX',
+            5 * 60 )
+        
+        //Query db using email. If customer, frontend redirects to changeCusPw
         return res.status(200).json({message: 'OTP verified successfully'})
     }catch(err){
         console.log('Error verifying OTP: ', err)
