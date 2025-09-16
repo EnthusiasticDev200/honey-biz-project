@@ -4,8 +4,8 @@ import { customerRoutes } from "./authRoutes/customerRoutes.js";
 import { productRoutes } from "./authRoutes/productRoutes.js";
 import { orderRoutes } from "./authRoutes/orderRoutes.js";
 import { orderItemRoutes } from "./authRoutes/orderItemRoutes.js";
-import { reviewRouter } from "./authRoutes/reviewRoutes.js";
-import { otpRouter } from "./authRoutes/otpRoutes.js";
+import { reviewRoutes } from "./authRoutes/reviewRoutes.js";
+import { otpRoutes } from "./authRoutes/otpRoutes.js";
 
 const router = express.Router()
 
@@ -25,9 +25,9 @@ router.use('/auth/order', orderRoutes)
 router.use('/auth/orderitem', orderItemRoutes)
 
 //reviews route
-router.use('/auth/review', reviewRouter)
+router.use('/auth/review', reviewRoutes)
 
-router.use('/auth/otp', otpRouter)
+router.use('/auth/otp', otpRoutes)
 
 
 
