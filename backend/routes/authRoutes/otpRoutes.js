@@ -10,4 +10,4 @@ router.post('/send', otpValidation,sendOtp)
 router.post('/verify', verifyOtpValidation,verifyOtp)
 
 
-export {router as otpRouter} 
+export {router as otpRoutes} 
