@@ -18,6 +18,13 @@ router.post('/myorder/:order_id/checkout', validateJWTAcessToken, customerOnly, 
 
 router.post('/myorder/:order_id/verify', validateJWTAcessToken, adminOnly, verifyPayment)
 
+
+
+
+
+
+
+
 export {router as orderRoutes}
 
 
