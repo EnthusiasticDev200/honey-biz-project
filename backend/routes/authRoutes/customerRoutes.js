@@ -9,18 +9,24 @@ import {
 import { validateJWTAcessToken, validateJWTRefreshToken,requireSuperUser, customerOnly } from "../../../middlewares/auth.js";
 import { registerCustomerValidation, updatePasswordValidation } from "../../../middlewares/validation.js";
 
+import { authLimiter, apiLimiter } from "../../../middlewares/rateLimiter.js";
+
+
+
+
+
 const router = express.Router()
 
-router.post('/create', registerCustomerValidation,registerCustomer)
-router.post('/login', loginCustomer)
-router.post('/refresh', validateJWTRefreshToken, customerOnly,refreshCustomerToken)
+router.post('/create', authLimiter, registerCustomerValidation,registerCustomer)
+router.post('/login', authLimiter, loginCustomer)
+router.post('/refresh', authLimiter, validateJWTRefreshToken, customerOnly,refreshCustomerToken)
 
-router.get('/logout', validateJWTAcessToken, customerOnly, logoutCustomer)
-router.get(["/view", "/view/:customer_id"], validateJWTAcessToken, requireSuperUser, viewCustomers) 
+router.get('/logout', apiLimiter, validateJWTAcessToken, customerOnly, logoutCustomer)
+router.get(["/view", "/view/:customer_id"], apiLimiter, validateJWTAcessToken, requireSuperUser, viewCustomers) 
 
-router.patch('/password/update', updatePasswordValidation, changeCustomerPassword)
+router.patch('/password/update', authLimiter, updatePasswordValidation, changeCustomerPassword)
 
-router.patch('/profile/update', validateJWTAcessToken, customerOnly, updateCustomerProfile)
+router.patch('/profile/update', apiLimiter, validateJWTAcessToken, customerOnly, updateCustomerProfile)
 
 
 

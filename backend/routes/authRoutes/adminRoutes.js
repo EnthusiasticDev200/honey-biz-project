@@ -6,7 +6,7 @@ import
 import { adminOnly, validateJWTAcessToken, validateJWTRefreshToken} from "../../../middlewares/auth.js";
 import { registerAdminValidation, updatePasswordValidation } from "../../../middlewares/validation.js";
 
-
+import { authLimiter, apiLimiter } from "../../../middlewares/rateLimiter.js";
 
 
 
@@ -15,13 +15,13 @@ import { registerAdminValidation, updatePasswordValidation } from "../../../midd
 const router = express.Router()
 
 
-router.post('/create', registerAdminValidation,registerAdmin)
-router.post('/login', loginAdmin)
-router.get('/logout', validateJWTAcessToken,logoutAdmin)
-router.post('/refresh', validateJWTRefreshToken, refreshAdminToken)
+router.post('/create', authLimiter, registerAdminValidation,registerAdmin)
+router.post('/login', authLimiter, loginAdmin)
+router.get('/logout', apiLimiter, validateJWTAcessToken,logoutAdmin)
+router.post('/refresh', authLimiter, validateJWTRefreshToken, refreshAdminToken)
 
-router.patch('/profile/update',validateJWTAcessToken, adminOnly, updateAdminProfile)
-router.patch('/password/update', updatePasswordValidation,changeAdminPassword)
+router.patch('/profile/update',apiLimiter, validateJWTAcessToken, adminOnly, updateAdminProfile)
+router.patch('/password/update', authLimiter, updatePasswordValidation,changeAdminPassword)
 
 
 

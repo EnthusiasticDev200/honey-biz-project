@@ -3,11 +3,15 @@ import { createProduct } from "../../controllers/authControllers/productControll
 import { productValidation } from "../../../middlewares/validation.js";
 import { requireSuperUser } from "../../../middlewares/auth.js";
 import { validateJWTAcessToken } from "../../../middlewares/auth.js";
+import { apiLimiter } from "../../../middlewares/rateLimiter.js";
+
+
+
 
 const router = express.Router()
 
 
-router.post('/create',productValidation, validateJWTAcessToken, requireSuperUser, createProduct )
+router.post('/create', apiLimiter, productValidation, validateJWTAcessToken, requireSuperUser, createProduct )
 
 
 
