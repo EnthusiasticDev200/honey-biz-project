@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 
 import http from 'http'
 
+import { paystackWebhook } from './backend/controllers/authControllers/orderControllers.js';
 
 import apiRoutes from './backend/routes/mainRoutes.js'
 
@@ -25,6 +26,8 @@ app.use(
     })
 )
 
+//mount webhook url to bypass express.json()
+app.post("/api/order/webhook", express.raw({ type : "application/json"}), paystackWebhook)
 
 
 //middleware
