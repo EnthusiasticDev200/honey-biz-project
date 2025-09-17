@@ -1,8 +1,10 @@
+import dotenv from 'dotenv'
 import db from '../../config/database.js'
 import paystack from '../../config/paystack.js'
 import positiveIntParam from '../../../utils/paramInput.js'
+import crypto from 'crypto'
 
-
+dotenv.config()
 
 const createOrder = async (req, res) =>{
     try{
@@ -289,9 +291,74 @@ const verifyPayment = async (req, res) =>{
     }
 }
 
+const paystackWebhook = async (req, res) =>{
+    const secret = process.env.PAYSTACK_SECRET_KEY
+   
+    try{
+        // handling raw body
+        const rawBody = req.body.toString()
+        // verify paystack header
+        const hash = crypto
+                    .createHmac('sha512', secret)
+                    .update(rawBody)
+                    .digest('hex')
+        
+        const paystackSignature = req.headers["x-paystack-signature"]
+    
+        if(hash !== paystackSignature){
+            return res.status(401).json({message: 'Invalid signature'})
+        }
+        //parse raw body once
+        const event = JSON.parse(rawBody)
+
+        if(event.event === "charge.success"){ //check event under transaction on webhook doc
+            const payment = event.data
+            const reference = payment.reference
+            const orderId = reference.split("_")[1] // removes timestamp for ORDER_{orderId}
+            
+            try{
+                await db.query(`
+                UPDATE orders
+                    SET payment_method = $1,
+                        total_amount = $2,
+                        payment_status = $3,
+                        updated_at = NOW()
+                    WHERE order_id = $4`, 
+                        [payment.channel, payment.amount / 100, 
+                            "confirmed", orderId])
+                console.log(`Order ${orderId} updated successfully via webhook`);
+            }catch(dbErr){
+                console.log("Db update failed: ", dbErr)
+                return res.status(500).json({
+                    message : "Updating DB failed",
+                    error : dbErr.stack
+                })
+            }
+        }
+        //200 res MUST be sent to Paystack when using webhook
+       return res.status(200).json({ message: "Webhook processed" });
+    }catch(err){
+        console.log("Error implementing Webhook: ", err)
+        return res.status(500).json({
+            message: "Webhook implementation failed",
+            error : err.stack
+        })
+    } 
+}
+
+
+
+
+
+
+
+
+
+
+
 export {
     createOrder, viewOrders, customerOrder,
-    orderCheckOut, verifyPayment
+    orderCheckOut, verifyPayment, paystackWebhook
     
     }
 
