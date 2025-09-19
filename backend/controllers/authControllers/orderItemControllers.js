@@ -8,9 +8,7 @@ dotenv.config()
 const generateOrderItems = async (req, res)=>{
     try{
         const customerId = req.customerId
-
         const {productName, quantity, unitPrice} = req.body
-
         const queryProduct = await db.query(`
             SELECT * FROM products WHERE product_name =$1`,
             [productName])
@@ -20,9 +18,7 @@ const generateOrderItems = async (req, res)=>{
        
         //extract productId, stockQuantity. and unitPrice 
         const productId = queryProduct.rows[0].product_id
-       
         const stockQuantity = queryProduct.rows[0].stock_quantity
-        
         const productPrice = queryProduct.rows[0].price
         
         if(quantity > stockQuantity){
@@ -37,19 +33,20 @@ const generateOrderItems = async (req, res)=>{
         }
         
         const myOrder = await db.query(`
-            SELECT order_id, created_at FROM orders WHERE customer_id = $1
+            SELECT order_id, payment_status,created_at FROM orders WHERE customer_id = $1
             `, [customerId])
-
-        //extract orderId
+        if(myOrder.rows.length === 0) return res.status(404).json({
+            message : "You have order(s)"
+        })
+        //extract orderId and payment_status
         const orderId = myOrder.rows[0].order_id;
-        const orderDate = myOrder.rows[0].created_at
+        const orderPaymentStatus = myOrder.rows[0].payment_status
         
-        if(orderDate < new Date()){
+        if(orderPaymentStatus !== 'pending'){
             return res.status(400).json({
                 message: "Sorry, You haven't placed a new order"
             })
         }
-      
         //No duplicate order_items
         const existingOrderItems = await db.query(`
             SELECT * 
@@ -80,8 +77,6 @@ const generateOrderItems = async (req, res)=>{
             productId : orderItems.product_id,
             quantity : orderItems.quantity
         }
-        console.log("orderItemsData: ", OrderItemsData)
-
         // Update products table
         await db.query(`
             UPDATE products
@@ -98,7 +93,6 @@ const generateOrderItems = async (req, res)=>{
                 quantity : OrderItemsData.quantity
             })
         )
-         
         return res.status(201).json({
             message:'Order items created successfully'})
     }catch(err){
@@ -199,8 +193,6 @@ const viewOrderItems = async (req, res) =>{
     }
 
 }
-
-
 
 export {generateOrderItems, myOrderItems, viewOrderItems}
 
