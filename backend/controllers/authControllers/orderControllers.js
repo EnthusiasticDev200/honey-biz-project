@@ -3,6 +3,7 @@ import db from '../../config/database.js'
 import paystack from '../../config/paystack.js'
 import positiveIntParam from '../../../utils/paramInput.js'
 import crypto from 'crypto'
+import discount from '../../../utils/discountFunction.js'
 
 dotenv.config()
 
@@ -163,8 +164,6 @@ const orderCheckOut = async (req, res) =>{
     const { email } = req.body
     const { order_id } = req.params
     const username = req.customerUsername
-   
-
     try{
         const verifyCustomerEmail = await db.query(`
             SELECT email FROM customers WHERE email = $1`, [email])
@@ -201,15 +200,13 @@ const orderCheckOut = async (req, res) =>{
             if (totalAmount.rows.length === 0) {
                 return res.status(400).json({ message: "No items found for this order" });
             }
-            
             const amount = totalAmount.rows[0].total_amount
-
+            const discountPrice = discount(amount)
             const reference = `ORDER_${orderId}_${Date.now()}`
-            
             //Initialize Paystack transaction
             const response = await paystack.post("/transaction/initialize", {
                 email, 
-                amount: amount * 100, // Paystack uses kobo (multiply by 100)
+                amount: discountPrice * 100, // Paystack uses kobo (multiply by 100)
                 reference: reference,
                 callback_url: `${process.env.BASE_URL}/api/auth/orders/${orderId}/verify?reference=${reference}}`,
             });
@@ -232,17 +229,14 @@ const orderCheckOut = async (req, res) =>{
 
 const verifyPayment = async (req, res) =>{
     const { order_id } = req.params
-
     //const { reference } = req.query  <- uncomment when using frontend
-    
-    const reference = "ORDER_4_1757367255435"
+    const reference =  "ORDER_6_1758298166836"
     try{
         if(!reference) return res.status(400).json({
             message : "No payment reference found" })
 
         try{
             const orderId = positiveIntParam(order_id)
-           
             // Check if payment has already been verified
             const checkOrder = await db.query(`
                 SELECT payment_status, total_amount 
@@ -254,12 +248,10 @@ const verifyPayment = async (req, res) =>{
                 && clearedOrder.total_amount !== '')
             return res.status(409).json({
                 message: 'Order payment already verified'})
-
             // verify transaction from paystack
             const response = await paystack.get(`/transaction/verify/${reference}`)
-            
             const paymentData = response.data.data
-               
+           
             if(paymentData.status === 'success'){
             //update order's table
             await db.query(`
@@ -293,7 +285,6 @@ const verifyPayment = async (req, res) =>{
 
 const paystackWebhook = async (req, res) =>{
     const secret = process.env.PAYSTACK_SECRET_KEY
-   
     try{
         // handling raw body
         const rawBody = req.body.toString()
@@ -302,7 +293,6 @@ const paystackWebhook = async (req, res) =>{
                     .createHmac('sha512', secret)
                     .update(rawBody)
                     .digest('hex')
-        
         const paystackSignature = req.headers["x-paystack-signature"]
     
         if(hash !== paystackSignature){
@@ -310,7 +300,6 @@ const paystackWebhook = async (req, res) =>{
         }
         //parse raw body once
         const event = JSON.parse(rawBody)
-
         if(event.event === "charge.success"){ //check event under transaction on webhook doc
             const payment = event.data
             const reference = payment.reference
