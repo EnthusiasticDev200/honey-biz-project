@@ -84,11 +84,27 @@ const customerOnly = (req, res, next)=>{
     next()
 }
 
+// For k6 test
+const testRequest = (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return next(); // Never fake in production
+  }
+  const isTestRequest = req.headers['x-test-request'] === 'true';
+  if (isTestRequest) {
+    return res.status(200).json({
+      message: "This is a test response",
+      token: "fake-token-for-k6"
+    });
+  }
+
+  next();
+};
+
 
 
 export {
     requireSuperUser, validateJWTAcessToken, validateJWTRefreshToken, 
-    customerOnly, adminOnly
+    customerOnly, adminOnly, testRequest
 }
 
 
