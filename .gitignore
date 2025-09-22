@@ -4,3 +4,11 @@ zzz.js
 *.json
 /node_modules
 /logs
+/__mock__
+/utils/dummyDataGenerator.js
+dummyGenerator.js
+/dummyGenerator
+insert_admins.sql
+tests/integration/discount.integration.test.js
+loadtests/customerReg.test.js
+loadtests/orderCheckout.test.js
