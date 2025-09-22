@@ -20,9 +20,10 @@ const createOrder = async (req, res) =>{
         
         // Clear pending orders first
         const pendingingOrder = await db.query(`
-            SELECT * FROM orders 
+            SELECT customer_id, payment_status 
+                FROM orders 
             WHERE customer_id = $1
-            AND payment_status = 'pending'
+                AND payment_status = 'pending'
          `, [customerId])
          if(pendingingOrder.rows.length === 1){
              return res.status(409).json({
