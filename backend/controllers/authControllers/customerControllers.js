@@ -42,7 +42,7 @@ const loginCustomer = async (req, res) => {
   try {
     const { email, password } = req.body;
     const queryCustomer = await db.query(`
-      SELECT * FROM customers WHERE email = $1`,
+      SELECT customer_id, username, password_hash FROM customers WHERE email = $1`,
       [email]
     );
     if (queryCustomer.rows.length === 0) {
