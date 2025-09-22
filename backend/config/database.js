@@ -1,4 +1,5 @@
 import pg from 'pg'
+
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -15,7 +16,16 @@ const db = new Pool(
   }
  );
 
-//  
-
+// measure db speed
+const originalQuery = db.query
+db.query = async function (...args){
+  const dbStart = performance.now()
+  const result = await originalQuery.apply(this, args)
+  const duration = performance.now() - dbStart
+  if(duration > 100){
+    console.warn(` Slow query (${duration.toFixed(2)} ms): ${args[0]}`);
+  }  console.log(`Query took ${duration} ms -> ${args[0]}`);
+  return result
+}
 export default db
 
