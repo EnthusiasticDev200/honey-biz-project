@@ -2,6 +2,7 @@ import db from "../../config/database.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../../../utils/jwtToken.js";
 import redis from "../../config/redis.js";
+import {performance} from 'perf_hooks'
 
 //register admin
 const registerAdmin = async (req, res) => {
@@ -48,14 +49,16 @@ const loginAdmin = async (req, res) => {
     const { email, password } = req.body;
     
     const checkAdmin = await db.query(
-      `SELECT * FROM admins WHERE email = $1`,
-      [email]
+      `SELECT admin_id, username, password_hash, role
+         FROM admins 
+        WHERE email = $1`,
+        [email]
     );
     if (checkAdmin.rows.length === 0){
       return res.status(401).json({ message: "Not an admin" });
     } 
     // capture admin
-    const admin = checkAdmin.rows[0];
+    const admin = checkAdmin.rows[0];    
     const passwordMatch = await bcrypt.compare(password, admin.password_hash);
 
     if (!passwordMatch){
