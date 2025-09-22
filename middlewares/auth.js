@@ -9,9 +9,8 @@ const validateJWTAcessToken = (req, res, next) =>{
    
     if(!accessToken) return res.status(401).json({message: 'No token provided'})
     try{
-        const decoded = jwt.verify(accessToken, process.env.JWT_SECRET, 
-            {
-                'algorithms' : [`HS256`]
+        const decoded = jwt.verify(accessToken, process.env.JWT_SECRET, {
+                algorithms : [`HS256`]
             })
         // admin info
         req.adminId = decoded.adminId || null;

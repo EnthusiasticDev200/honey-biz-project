@@ -8,7 +8,10 @@ const generateToken = {
         const token = jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            {'expiresIn' : '5m'}
+            {
+                algorithm: 'HS256',
+                'expiresIn' : '5m'
+            }
         )
         return token
     },
@@ -17,7 +20,10 @@ const generateToken = {
         const newToken = jwt.sign(
             userId,
             process.env.REFRESH_TOKEN_SECRET,
-            {'expiresIn' : '24h'}
+            {
+                algorithm: 'HS256',
+                'expiresIn' : '24h'
+            }
         )
         return newToken
     }
