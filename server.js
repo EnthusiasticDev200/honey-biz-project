@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-
+import helmet from 'helmet';
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser';
@@ -29,6 +29,21 @@ app.use(
 //mount webhook url to bypass express.json()
 app.post("/api/order/webhook", express.raw({ type : "application/json"}), paystackWebhook)
 
+// helmet set-up
+if(process.env.NODE_ENV === 'production'){
+  //Strict measure
+  app.use(helmet())
+}else{
+  //Relaxed measure
+  app.use(
+    helmet({
+      contentSecurityPolicy : {
+        useDefaults : true,
+        'script-src' : ['self', 'unsafe-inlie']
+      }
+    })
+  )
+}
 
 //middleware
 app.use(express.json())
