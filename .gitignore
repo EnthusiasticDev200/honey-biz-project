@@ -1,7 +1,7 @@
 .env
 /AAA
 zzz.js
-*.json
+
 /node_modules
 /logs
 /__mock__
