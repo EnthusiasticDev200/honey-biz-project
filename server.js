@@ -9,6 +9,7 @@ import http from 'http'
 import { paystackWebhook } from './backend/controllers/authControllers/orderControllers.js';
 import apiRoutes from './backend/routes/mainRoutes.js'
 import logger from './utils/logger.js';
+import allowedOrigins from './backend/cors.js';
 
 dotenv.config()
 const app = express()
@@ -16,12 +17,18 @@ const app = express()
 const server = http.createServer(app)
 
 
-const PORT = process.env.APP_PORT
+const PORT = process.env.PORT || 4000
 //setting cors
 app.use(
     cors({
-        origin : `http://localhost:${PORT}`,
-        methods : ['GET', 'POST', 'PUT', 'PATCH', 'DELETE' ],
+        origin :function(origin, callback){
+          if(!origin || allowedOrigins.includes(origin)){
+            callback(null, true)
+          }else{
+            callback(new Error("Site not allowed by CORS"))
+          }
+        },
+        methods : [ 'GET', 'POST', 'PATCH', 'DELETE'],
         credentials : true
     })
 )
@@ -63,8 +70,8 @@ app.get('/', (req, res)=>{
 // })
 
 server.listen(PORT, ()=>{
-    logger.info(`Server started on port ${PORT}`)
-    console.log(`Server is running on http://localhost:${PORT}`)
+    logger.info(`Server started on port ${PORT}`|| 4000)
+    console.log(`Server is running on http://localhost:${PORT}` )
 })
 
 
