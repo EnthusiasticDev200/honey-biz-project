@@ -10,6 +10,7 @@ import { paystackWebhook } from './backend/controllers/authControllers/orderCont
 import apiRoutes from './backend/routes/mainRoutes.js'
 import logger from './utils/logger.js';
 import allowedOrigins from './backend/cors.js';
+import { success } from 'zod';
 
 dotenv.config()
 const app = express()
@@ -65,10 +66,6 @@ app.get('/', (req, res)=>{
 })
 
 
-// app.use('', (req, res)=>{
-//     res.status(404).json({message: 'Route not found'})
-// })
-
 server.listen(PORT, ()=>{
     logger.info(`Server started on port ${PORT}`|| 4000)
     console.log(`Server is running on http://localhost:${PORT}` )
@@ -85,6 +82,24 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
+// Catch wrong route 
+app.use((req, res)=>{
+    res.status(404).json(
+      {
+        success: false,
+        error : "Route not found"
+      })
+})
+
+// Error handler
+app.use((err, req, res, next)=>{
+  console.error("Unhandled error: ", err.stack)
+  res.status(500).json(
+    {
+      success : false,
+      error : "Internal server error"
+    })
+})
 
 export default app;
 
