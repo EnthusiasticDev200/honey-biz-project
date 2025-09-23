@@ -10,11 +10,15 @@ const devRedis = {
     port : 6379}
 
 
-const prodRedis =  process.env.REDIS_PUBLIC_URL 
+const prodRedis =  process.env.REDIS_PUBLIC_URL || process.env.REDIS_URL
+console.log(prodRedis)
 
 if(process.env.NODE_ENV === 'production' ){
     console.log("Redis on Production")
-    redis = new Redis(prodRedis)
+    redis = new Redis(prodRedis, {
+        maxRetriesPerRequest : null, // ensure for Redis Cloud and Railway
+        enableReadyCheck : true
+    })
 } else redis = new Redis(devRedis)
 
 redis.on('connect', (err) => {
