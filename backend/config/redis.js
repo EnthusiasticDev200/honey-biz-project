@@ -11,7 +11,7 @@ const devRedis = {
 
 
 const prodRedis =  process.env.REDIS_PUBLIC_URL || process.env.REDIS_URL
-console.log(prodRedis)
+
 
 if(process.env.NODE_ENV === 'production' ){
     console.log("Redis on Production")
