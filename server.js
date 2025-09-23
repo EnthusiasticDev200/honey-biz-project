@@ -13,7 +13,10 @@ import allowedOrigins from './backend/cors.js';
 import { success } from 'zod';
 
 dotenv.config()
+// Reverse proxy for Railway
+app.set('trust proxy', 1);
 const app = express()
+
 
 const server = http.createServer(app)
 
