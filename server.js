@@ -13,13 +13,13 @@ import allowedOrigins from './backend/cors.js';
 import { success } from 'zod';
 
 dotenv.config()
-// Reverse proxy for Railway
-app.set('trust proxy', 1);
+
 const app = express()
 
+// Enabling trust proxy (Reverse proxy) for Railway
+app.set('trust proxy', 1);
 
 const server = http.createServer(app)
-
 
 const PORT = process.env.PORT || 4000
 //setting cors
@@ -36,7 +36,6 @@ app.use(
         credentials : true
     })
 )
-
 //mount webhook url to bypass express.json()
 app.post("/api/order/webhook", express.raw({ type : "application/json"}), paystackWebhook)
 
@@ -60,7 +59,6 @@ if(process.env.NODE_ENV === 'production'){
 app.use(express.json())
 app.use(cookieParser())
 
-
 //routes
 app.use('/api', apiRoutes)
 
@@ -68,12 +66,10 @@ app.get('/', (req, res)=>{
     res.status(200).send('Welcome to Nita Honey Biz')
 })
 
-
 server.listen(PORT, ()=>{
     logger.info(`Server started on port ${PORT}`|| 4000)
     console.log(`Server is running on http://localhost:${PORT}` )
 })
-
 
 process.on('uncaughtException', (err) => {
   logger.error("Uncaught Exception — shutting down", { message: err.message, stack: err.stack });
