@@ -10,10 +10,7 @@ const devRedis = {
     port : 6379}
 
 
-console.log("🚀 REDIS_URL at runtime:", process.env.REDIS_URL);
-
-
-const prodRedis =  process.env.REDIS_URL 
+const prodRedis =  process.env.REDIS_PUBLIC_URL 
 
 if(process.env.NODE_ENV === 'production' ){
     console.log("Redis on Production")
