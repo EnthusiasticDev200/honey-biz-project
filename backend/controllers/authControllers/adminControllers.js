@@ -46,21 +46,29 @@ const registerAdmin = async (req, res) => {
 
 const loginAdmin = async (req, res) => {
   try {
+    const apiStart = performance.now()
+    console.log("api start at:", apiStart + 'ms')
     const { email, password } = req.body;
     
+    const queryStart = performance.now()
     const checkAdmin = await db.query(
       `SELECT admin_id, username, password_hash, role
          FROM admins 
         WHERE email = $1`,
         [email]
     );
+    const queryend = performance.now()
+    console.log("total query executionTime:", queryend-queryStart + 'ms')
     if (checkAdmin.rows.length === 0){
       return res.status(401).json({ message: "Not an admin" });
     } 
     // capture admin
-    const admin = checkAdmin.rows[0];    
-    const passwordMatch = await bcrypt.compare(password, admin.password_hash);
+    const admin = checkAdmin.rows[0];   
 
+    const hashStart = performance.now() 
+    const passwordMatch = await bcrypt.compare(password, admin.password_hash);
+    const hashEnd = performance.now()
+    console.log("Total hashing time took: ", hashEnd-hashStart + 'ms')
     if (!passwordMatch){
       return res.status(401).json({
         message: "Oops! wrong password",
@@ -78,13 +86,18 @@ const loginAdmin = async (req, res) => {
     const accessToken = generateToken.accessToken(adminPayload)
   
     const refreshToken = generateToken.refreshToken(refreshTokenPayload)
+    
     // Store admin info in Redis
+    const redisStart = performance.now()
     await redis.set(
       `admin : ${refreshTokenPayload}`,
       JSON.stringify(adminPayload),
       "EX",
       7 * 24 * 60 * 60 // 7days
     )
+    const redisEnd = performance.now()
+    console.log("Total time spent on Redis:", redisEnd-redisStart + 'ms')
+    
     res.clearCookie('admin_token')
     //Send token to cookie
     res.cookie('admin_token', accessToken,
@@ -102,6 +115,10 @@ const loginAdmin = async (req, res) => {
         path: "/",         
         maxAge: 24 * 60 * 60 * 1000 // 24hrs
     })
+
+    const apiEnd = performance.now()
+    console.log("API spent total of:", apiEnd-apiStart + 'ms')
+
     return res.status(200).json({ message: `Welcome ${admin.username}` });
   
   } catch (err) {
