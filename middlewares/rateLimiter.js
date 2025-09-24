@@ -2,7 +2,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 req, per 15min
+  max: 10, // 5 req, per 15min
   message: {
     error: "Too many attempts. Try again in 15 minutes.",
   },
