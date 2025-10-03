@@ -21,7 +21,7 @@ router.post('/create', authLimiter, registerCustomerValidation,registerCustomer)
 router.post('/login', authLimiter, loginCustomer)
 router.post('/refresh', authLimiter, validateJWTRefreshToken, customerOnly,refreshCustomerToken)
 
-router.get('/logout', apiLimiter, validateJWTAcessToken, customerOnly, logoutCustomer)
+router.post('/logout', apiLimiter, validateJWTAcessToken, customerOnly, logoutCustomer)
 router.get(["/view", "/view/:customer_id"], apiLimiter, validateJWTAcessToken, requireSuperUser, viewCustomers) 
 
 router.patch('/password/update', authLimiter, updatePasswordValidation, changeCustomerPassword)

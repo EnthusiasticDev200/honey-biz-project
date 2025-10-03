@@ -17,7 +17,7 @@ const router = express.Router()
 
 router.post('/create', authLimiter, registerAdminValidation,registerAdmin)
 router.post('/login', authLimiter, loginAdmin)
-router.get('/logout', apiLimiter, validateJWTAcessToken,logoutAdmin)
+router.post('/logout', apiLimiter, validateJWTAcessToken,logoutAdmin)
 router.post('/refresh', authLimiter, validateJWTRefreshToken, refreshAdminToken)
 
 router.patch('/profile/update',apiLimiter, validateJWTAcessToken, adminOnly, updateAdminProfile)
